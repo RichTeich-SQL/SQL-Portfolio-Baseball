@@ -1,9 +1,9 @@
-My first table is EventLog2025 which shows every play that took place during season. Not just atbats but also shows pickoffs, stolen base attempts, wild pitches, passed baseballs and even defensive interference.
-The table is 189.311 rows.
+My first table is EventLog2025 which shows every play that took place during the 162 game season. This is not just the result of the atbat but also shows pickoffs, stolen base attempts, wild pitches, passed baseballs and even defensive interference.
+The table is 189.311 rows. 
 It is the logical starting point for creating queries that can be used to analyze both pitching and hitting performance based on grouping and aggregating data:
   - By inning
   - By game score
   - Runners on base
   - By outs
   And much more
-  
+  I loaded the table into SQL Server 2022 using the Management Studio.
