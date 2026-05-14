@@ -1,0 +1,77 @@
+WITH PitcherEvents AS (
+    SELECT 
+        hteamdate,
+        inning,
+        pitcher,
+        CASE WHEN half=0 THEN left(hteamdate,3) ELSE Visitors END As PitcherTeam,
+        CASE WHEN half=0 THEN score_h-score_v ELSE score_v-score_h END As ScoreDiff,
+        
+        batter,
+        CASE WHEN half=1 THEN left(hteamdate,3) ELSE Visitors END As BatterTeam,
+        outs,
+        balls,
+        strikes,
+        CASE
+            WHEN ON1st is null AND on2nd is null and on3rd is null THEN 'EMPTY'
+            WHEN ON1st is not null AND (on2nd is null and on3rd is null) THEN '1'
+            WHEN ON2nd is not null AND (on1st is null and on3rd is null) THEN '2'
+            WHEN ON3rd is not null AND (on1st is null and on2nd is null) THEN '3'
+            WHEN ON1st is not null AND on2nd is not null and (on3rd is null) THEN '1-2'
+            WHEN ON1st is null AND (on2nd is not null and on3rd is not null) THEN '2-3'
+            WHEN (ON1st is not null AND on3rd is not null) AND (on2nd is null) THEN '1-3'
+            WHEN On1st is not null and on2nd is not null and on3rd is not null THEN '1-2-3'
+        END BASERUNNERS,
+        result,
+        outsonplay,
+        hitvalue,
+        ROW_NUMBER() OVER (
+            PARTITION BY hteamdate, pitcher 
+            ORDER BY inning ASC, outs ASC
+        ) AS RecordSequence
+    FROM tblEventLog2025
+),
+UniqueRoster AS (
+    SELECT DISTINCT ID, Fname, Lname 
+    FROM tblRosters2025
+),
+FirstBatter AS (
+    SELECT 
+        P.hteamdate,
+        P.pitcher,
+        R.Fname + ' ' + R.Lname as pitchername,
+        P.PitcherTeam,
+        CAST(P.inning AS VARCHAR(2)) + ' . ' + CAST(P.outs AS VARCHAR(1)) AS EntryInning,
+        P.batter,
+        P.BatterTeam,
+        P.inning, -- Kept for filtering
+        P.outs,
+        P.ScoreDiff,
+        P.balls,
+        P.strikes,
+        P.BASERUNNERS,
+        P.result,
+        P.outsonplay,
+        P.hitvalue
+    FROM PitcherEvents P
+    JOIN UniqueRoster R ON P.pitcher = R.ID -- This is the PITCHER join
+    WHERE P.RecordSequence = 1 
+)
+SELECT 
+    F.hteamdate,
+    F.pitchername,
+    F.PitcherTeam,
+    F.EntryInning,
+    B.Fname + ' ' + B.Lname AS BatterName, -- This pulls from the BATTER join
+    F.BatterTeam,
+    F.ScoreDiff,
+    F.balls,
+    F.strikes,
+    F.result,
+    F.outsonplay,
+    F.BASERUNNERS,
+    F.hitvalue
+FROM FirstBatter F
+JOIN UniqueRoster B ON F.batter = B.ID -- This is the BATTER join
+WHERE F.inning >= 8 
+  AND F.ScoreDiff BETWEEN -3 AND 3 
+ORDER BY F.pitchername, SUBSTRING(F.hteamdate, 8, 4);
